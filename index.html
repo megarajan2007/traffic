@@ -1,0 +1,348 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>AI Emergency Traffic Controller</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0b1220;
+    color: white;
+}
+
+header {
+    padding: 25px;
+    text-align: center;
+    background: #14213d;
+    border-bottom: 2px solid #263c60;
+}
+
+header h1 {
+    margin: 0 0 10px;
+    color: #55d6ff;
+}
+
+header p {
+    color: #b9c8df;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 25px auto;
+    padding: 15px;
+}
+
+.panel {
+    background: #141f33;
+    border: 1px solid #293a57;
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 20px;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 15px 0;
+}
+
+select, button {
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #405575;
+    font-size: 15px;
+}
+
+select {
+    flex: 1;
+    min-width: 150px;
+    background: #0b1425;
+    color: white;
+}
+
+button {
+    cursor: pointer;
+    font-weight: bold;
+    background: #2589ff;
+    color: white;
+    border: none;
+}
+
+button:hover {
+    opacity: 0.85;
+}
+
+.emergency {
+    background: #e83d54;
+}
+
+.reset {
+    background: #334663;
+}
+
+.status {
+    padding: 14px;
+    border-radius: 8px;
+    background: #0b1425;
+    margin: 15px 0;
+    line-height: 1.6;
+}
+
+.traffic-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.road {
+    background: #0b1425;
+    border: 1px solid #30415e;
+    border-radius: 10px;
+    padding: 18px 8px;
+    text-align: center;
+}
+
+.light {
+    width: 27px;
+    height: 27px;
+    display: inline-block;
+    border-radius: 50%;
+    margin: 12px 4px;
+    background: #303947;
+    border: 2px solid #68768b;
+}
+
+.light.red.on {
+    background: #ff4055;
+    box-shadow: 0 0 15px #ff4055;
+}
+
+.light.yellow.on {
+    background: #ffca43;
+    box-shadow: 0 0 15px #ffca43;
+}
+
+.light.green.on {
+    background: #24d69b;
+    box-shadow: 0 0 15px #24d69b;
+}
+
+.signal-text {
+    font-weight: bold;
+    font-size: 13px;
+}
+
+footer {
+    text-align: center;
+    color: #91a3bd;
+    padding: 20px;
+    font-size: 12px;
+}
+
+@media (max-width: 600px) {
+    .traffic-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    header h1 {
+        font-size: 23px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🚦 AI Emergency & Traffic Controller</h1>
+    <p>Smart Traffic Management Demonstration</p>
+</header>
+
+<div class="container">
+
+    <section class="panel">
+        <h2>🚨 Emergency Detection Control</h2>
+        <p>Select a vehicle and its approaching road.</p>
+
+        <div class="controls">
+            <select id="vehicle">
+                <option>Ambulance</option>
+                <option>Fire Engine</option>
+                <option>Police</option>
+            </select>
+
+            <select id="direction">
+                <option>North</option>
+                <option>East</option>
+                <option>South</option>
+                <option>West</option>
+            </select>
+        </div>
+
+        <div class="controls">
+            <button class="emergency" onclick="detectEmergency()">
+                🚨 Detect Emergency
+            </button>
+
+            <button onclick="nextPhase()">
+                Next Traffic Phase
+            </button>
+
+            <button class="reset" onclick="resetSystem()">
+                Reset System
+            </button>
+        </div>
+
+        <div class="status">
+            <strong>System Alert:</strong>
+            <div id="alert">Connecting...</div>
+
+            <p>
+                <strong>Mode:</strong>
+                <span id="mode">NORMAL</span>
+            </p>
+
+            <p>
+                <strong>Priority Road:</strong>
+                <span id="priority">None</span>
+            </p>
+
+            <p>
+                <strong>Last Updated:</strong>
+                <span id="time">--:--:--</span>
+            </p>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>🚦 Live Traffic Signals</h2>
+        <p>Green indicates the currently permitted simulated approach.</p>
+
+        <div class="traffic-grid" id="trafficGrid"></div>
+    </section>
+
+</div>
+
+<footer>
+    College project prototype · Simulation only.
+    Not connected to real traffic infrastructure.
+</footer>
+
+<script>
+const roads = ["North", "East", "South", "West"];
+
+function renderTraffic(data) {
+    document.getElementById("alert").textContent =
+        data.alert;
+
+    document.getElementById("mode").textContent =
+        data.mode.toUpperCase();
+
+    document.getElementById("priority").textContent =
+        data.priority_direction || "None";
+
+    document.getElementById("time").textContent =
+        data.updated_at;
+
+    const grid = document.getElementById("trafficGrid");
+
+    grid.innerHTML = roads.map(road => {
+        const signal = data.signals[road];
+
+        return `
+            <div class="road">
+                <h3>${road}</h3>
+
+                <div>
+                    <span class="light red ${
+                        signal === "RED" ? "on" : ""
+                    }"></span>
+
+                    <span class="light yellow ${
+                        signal === "YELLOW" ? "on" : ""
+                    }"></span>
+
+                    <span class="light green ${
+                        signal === "GREEN" ? "on" : ""
+                    }"></span>
+                </div>
+
+                <div class="signal-text">${signal}</div>
+            </div>
+        `;
+    }).join("");
+}
+
+async function sendRequest(url, body = {}) {
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.error || "Request failed");
+    }
+
+    renderTraffic(data);
+}
+
+async function refreshStatus() {
+    try {
+        const response = await fetch("/api/state");
+        const data = await response.json();
+        renderTraffic(data);
+    } catch (error) {
+        document.getElementById("alert").textContent =
+            "Server not connected. Start app.py.";
+    }
+}
+
+async function detectEmergency() {
+    try {
+        await sendRequest("/api/emergency", {
+            vehicle: document.getElementById("vehicle").value,
+            direction: document.getElementById("direction").value
+        });
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function resetSystem() {
+    try {
+        await sendRequest("/api/reset");
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function nextPhase() {
+    try {
+        await sendRequest("/api/next-phase");
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+refreshStatus();
+setInterval(refreshStatus, 2000);
+</script>
+
+</body>
+</html>
